@@ -11,6 +11,7 @@ synthesizes its own failed() with error "requester_local_timeout" -- the Special
 itself never sends a timeout message (see contract.py's docstring, point 7).
 """
 
+import os
 import time
 import uuid
 from pathlib import Path
@@ -24,6 +25,11 @@ POLL_INTERVAL_SECONDS = 1
 POLL_TIMEOUT_SECONDS = 15
 
 FORM_PATH = Path(__file__).parent / "mock_support_app" / "index.html"
+
+# Set PLAYWRIGHT_HEADED=1 to watch the browser fill/submit the form live (e.g. for
+# a demo). Off by default so automated runs (run_tests.py, CI) stay headless and fast.
+HEADED = os.environ.get("PLAYWRIGHT_HEADED") == "1"
+SLOW_MO_MS = 800 if HEADED else 0
 
 # Mirrors mock_support_app/script.js's CATEGORY_LABELS, used to verify the
 # confirmation echoes back the category we selected.
@@ -75,7 +81,7 @@ def submit_ticket_via_browser(issue_text: str, status: dict) -> dict:
     resolution = status["result"]["resolution"]
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(headless=not HEADED, slow_mo=SLOW_MO_MS)
         page = browser.new_page()
         try:
             page.goto(FORM_PATH.as_uri())

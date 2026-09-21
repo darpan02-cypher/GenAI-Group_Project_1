@@ -36,6 +36,12 @@ via the A2A contract in `contract.py`, Specialist runs RAG over `knowledge_base/
 and returns a grounded, sourced answer, Requester uses that answer to fill and
 submit the mock form via Playwright, then verifies the confirmation.
 
+To watch the browser fill/submit the form live instead of running headless (e.g. for a demo):
+
+```
+PLAYWRIGHT_HEADED=1 python run_tests.py
+```
+
 File map:
 - `contract.py` — shared A2A JSON shapes both agents import (read this first).
 - `specialist_agent.py` — RAG pipeline (FAISS + sentence-transformers + Groq) and
