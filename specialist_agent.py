@@ -50,7 +50,7 @@ logger = logging.getLogger("specialist_agent")
 
 KB_DIR = Path(__file__).parent / "knowledge_base"
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 CHUNK_SIZE = 200
 TOP_K = 3
@@ -198,10 +198,11 @@ def submit_task(task_id: str, query: str) -> dict:
     """Requester -> Specialist submission. Returns the immediate ack (contract.ack)
     and kicks off RAG retrieval + generation on a background thread so the ack
     returns without waiting on FAISS/Groq."""
+    ack = contract.ack(task_id)
     with _lock:
-        _tasks[task_id] = contract.ack(task_id)
+        _tasks[task_id] = ack
     threading.Thread(target=_process_task, args=(task_id, query), daemon=True).start()
-    return dict(_tasks[task_id])
+    return dict(ack)
 
 
 def get_status(task_id: str) -> dict:
