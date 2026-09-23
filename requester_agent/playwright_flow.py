@@ -51,7 +51,12 @@ def submit_ticket_via_browser(issue_text: str, status: dict) -> dict:
     if status.get("status") != "completed":
         return {"ok": False, "reason": f"specialist did not complete: {status.get('error')}"}
     category = status["result"]["category"]
-    result = submit_ticket(issue_text, category, status["result"]["resolution"])
+    result = submit_ticket(
+        issue_text,
+        category,
+        status["result"]["resolution"],
+        headless=os.environ.get("PLAYWRIGHT_HEADED") != "1",
+    )
     result["ok"] = (
         result["shown_category"] == CATEGORY_LABELS[category]
         and result["shown_resolution"] == status["result"]["resolution"]

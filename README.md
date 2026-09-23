@@ -39,7 +39,11 @@ submit the mock form via Playwright, then verifies the confirmation.
 To watch the browser fill/submit the form live instead of running headless (e.g. for a demo):
 
 ```
-PLAYWRIGHT_HEADED=1 python run_tests.py
+# PowerShell
+$env:PLAYWRIGHT_HEADED = "1"; python run_tests.py
+
+# Command Prompt
+set PLAYWRIGHT_HEADED=1 && python run_tests.py
 ```
 
 Run one request through the composition root:
