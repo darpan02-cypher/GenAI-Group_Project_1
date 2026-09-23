@@ -60,6 +60,20 @@ SIMILARITY_THRESHOLD = 0.30  # cosine similarity below this -> "no relevant docu
 # Categories the LLM/knowledge base may surface that have no matching <option> in
 # the form. Mapped to the closest valid category per the documented edge case:
 # an "Email" issue is treated as a client/application problem (closest = software).
+#
+# --- Decision on security.md handling (Pair 1, for the report) ---
+# security.md's own "Ticket Category" is "Security", which -- like "Email" --
+# has no matching form option, and per the locked decision we do not add a 5th
+# form category for it. So "security" still maps to "account_access" (an
+# account-compromise report is, mechanically, an account-access problem).
+# What changes is that we don't silently treat it the same as a plain
+# password reset: SYSTEM_PROMPT explicitly instructs the LLM to keep the
+# escalation/identity-verification language from security.md in the
+# resolution text even though the *category* collapses to account_access,
+# and _resolve_category() below logs security-sourced mappings distinctly
+# from the plain email/software one so the report can point to real log
+# output justifying this as a deliberate escalation-preserving choice, not a
+# silent loss of information.
 CATEGORY_FALLBACK_MAP = {
     "email": "software",
     "security": "account_access",
@@ -71,10 +85,21 @@ context from the knowledge base. Do not use outside knowledge, and do not invent
 steps that are not supported by the context.
 
 Respond with a strict JSON object and nothing else:
-{"category": "<one of: account_access, hardware, software, network>", "resolution": "<2-4 sentence resolution>"}
+{"category": "<one of: account_access, hardware, software, network>", "resolution": "<2-3 sentence resolution>"}
 
-If the issue is about email, use "software" (the email client is the application at fault).
-resolution must be concise, actionable text a support agent could hand directly to the user."""
+Category mapping rules (the ticket form only has these 4 options):
+- Email issues -> "software" (the email client is the application at fault).
+- Security issues (suspected account compromise, suspicious login activity, an exposed \
+password, phishing) -> "account_access", since a security incident is still fundamentally \
+an account-access problem and the form has no separate security option. BUT the resolution \
+text must still carry the security procedure, not a generic password-reset procedure: state \
+that identity must be verified before any password reset or account change, and that the \
+issue should be escalated to the Security team rather than resolved through standard \
+troubleshooting alone.
+
+resolution must be concise, actionable text a support agent could hand directly to the user \
+-- 2-3 sentences, direct/imperative tone, no filler like "please note" or restating the \
+problem back to the user."""
 
 
 @dataclass(frozen=True)
@@ -181,6 +206,13 @@ def _resolve_category(task_id: str, category: str, sources: list[str]) -> str:
     if "email.md" in sources:
         logger.info(
             "task %s: 'Email' has no matching form option; routed to %r per documented edge case",
+            task_id, mapped,
+        )
+    elif "security.md" in sources:
+        logger.info(
+            "task %s: security issue routed to %r; escalation/identity-verification "
+            "language preserved in resolution text per SYSTEM_PROMPT (not a plain "
+            "password reset)",
             task_id, mapped,
         )
     else:
