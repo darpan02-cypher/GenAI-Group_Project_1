@@ -20,6 +20,13 @@ class FormFieldUnavailableError(Exception):
     """The specialist result cannot be represented by the form."""
 
 
+def _slow_mo_ms() -> int:
+    configured = os.environ.get("PLAYWRIGHT_SLOW_MO_MS")
+    if configured is not None:
+        return max(0, int(configured))
+    return 800 if os.environ.get("PLAYWRIGHT_HEADED") == "1" else 0
+
+
 def submit_ticket(issue_text: str, category: str, resolution: str, app_path: Path = FORM_PATH, headless: bool = True) -> dict:
     if category not in CATEGORY_LABELS:
         raise FormFieldUnavailableError(f"The ticket form has no category option for '{category}'.")
@@ -27,7 +34,7 @@ def submit_ticket(issue_text: str, category: str, resolution: str, app_path: Pat
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             headless=headless,
-            slow_mo=800 if os.environ.get("PLAYWRIGHT_HEADED") == "1" else 0,
+            slow_mo=_slow_mo_ms(),
         )
         page = browser.new_page()
         try:

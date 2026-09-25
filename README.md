@@ -42,6 +42,9 @@ To watch the browser fill/submit the form live instead of running headless (e.g.
 # PowerShell
 $env:PLAYWRIGHT_HEADED = "1"; python run_tests.py
 
+# Optional: add a 2-second delay after each Playwright action
+$env:PLAYWRIGHT_SLOW_MO_MS = "2000"; python run_tests.py
+
 # Command Prompt
 set PLAYWRIGHT_HEADED=1 && python run_tests.py
 ```
