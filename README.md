@@ -10,7 +10,7 @@
 
 3. Install Playwright browsers:
 
-   playwright install
+   python -m playwright install chromium
 
 4. Copy `.env.example` to `.env`.
 5. Add your API key.
@@ -26,7 +26,7 @@ in your browser.
 ## Run the Agents
 
 ```
-playwright install chromium   # one-time
+python -m playwright install chromium   # one-time
 python run_tests.py
 ```
 
@@ -39,16 +39,40 @@ submit the mock form via Playwright, then verifies the confirmation.
 To watch the browser fill/submit the form live instead of running headless (e.g. for a demo):
 
 ```
-PLAYWRIGHT_HEADED=1 python run_tests.py
+# PowerShell
+$env:PLAYWRIGHT_HEADED = "1"; python run_tests.py
+
+# Optional: add a 2-second delay after each Playwright action
+$env:PLAYWRIGHT_SLOW_MO_MS = "2000"; python run_tests.py
+
+# Command Prompt
+set PLAYWRIGHT_HEADED=1 && python run_tests.py
+```
+
+Run one request through the composition root:
+
+```text
+python main.py "My laptop won't connect to Wi-Fi."
+python main.py --headed "My laptop won't connect to Wi-Fi."
+```
+
+Run the dependency-light unit tests:
+
+```text
+python -m unittest discover -s tests -v
 ```
 
 File map:
-- `contract.py` — shared A2A JSON shapes both agents import (read this first).
-- `specialist_agent.py` — RAG pipeline (FAISS + sentence-transformers + Groq) and
-  the in-memory task store. Advanced RAG technique: context window enhancement
-  (see module docstring for why).
-- `requester_agent.py` — A2A polling loop + Playwright driver for the mock form.
-- `run_tests.py` — wires both agents against `test_cases.json`.
+- `a2a/protocol.py` — typed task state and thread-safe in-process protocol.
+- `a2a/messages.py` and `contract.py` — JSON message adapters and compatibility API.
+- `rag/index.py` — knowledge-base chunking, embeddings, and FAISS search.
+- `rag/retriever.py` — similarity filtering and context-window expansion.
+- `rag/generator.py` — grounded Groq generation and response validation.
+- `specialist_agent/agent.py` — specialist orchestration and task lifecycle.
+- `requester_agent/agent.py` — A2A polling and timeout handling.
+- `requester_agent/playwright_flow.py` — browser form automation and verification.
+- `main.py` — composition root that wires the application together.
+- `run_tests.py` — end-to-end cases; `tests/` contains focused unit tests.
 
 ## Project Requirements
 

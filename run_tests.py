@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 
 import contract
-import requester_agent
+from main import create_support_system
+from requester_agent.playwright_flow import submit_ticket_via_browser
 
 TEST_CASES_PATH = Path(__file__).parent / "test_cases.json"
 
@@ -31,20 +32,17 @@ def run_case(case_id, query: str, expected_label: str) -> bool:
     expected_value = EXPECTED_LABEL_TO_VALUE.get(expected_label)
     print(f"\n=== Case {case_id}: {query!r} (expected: {expected_label}) ===")
 
-    status = requester_agent.request_support(query)
-
-    if status["status"] != contract.STATUS_COMPLETED:
-        print(f"  specialist did not complete: status={status['status']} error={status.get('error')}")
+    requester, _store = create_support_system()
+    try:
+        result = requester.handle_user_request(query)
+    except Exception as exc:
+        print(f"  workflow error: {exc}")
         print("  RESULT: FAIL")
         return False
-
-    got_category = status["result"]["category"]
-    report = requester_agent.submit_ticket_via_browser(query, status)
-
-    passed = bool(report.get("ok")) and got_category == expected_value
-
-    print(f"  category: {got_category} (expected {expected_value})")
-    print(f"  sources: {status['result']['sources']}")
+    report = submit_ticket_via_browser(query, {"status": "completed", "result": result})
+    passed = bool(report.get("ok")) and result["category"] == expected_value
+    print(f"  category: {result['category']} (expected {expected_value})")
+    print(f"  sources: {result['sources']}")
     print(f"  playwright: {report}")
     print(f"  RESULT: {'PASS' if passed else 'FAIL'}")
     return passed
@@ -52,11 +50,15 @@ def run_case(case_id, query: str, expected_label: str) -> bool:
 
 def run_failure_demo() -> bool:
     print("\n=== Bonus case: out-of-scope query (demonstrates failure path) ===")
-    status = requester_agent.request_support("What is the capital of France?")
-    ok = status["status"] == contract.STATUS_FAILED
-    print(f"  status: {status['status']} error: {status.get('error')}")
-    print(f"  RESULT: {'PASS (correctly failed, no Playwright run)' if ok else 'FAIL (should have failed)'}")
-    return ok
+    requester, _store = create_support_system()
+    try:
+        requester.handle_user_request("What is the capital of France?")
+    except Exception as exc:
+        print(f"  status: failed error: {exc}")
+        print("  RESULT: PASS (correctly failed)")
+        return True
+    print("  RESULT: FAIL (should have failed)")
+    return False
 
 
 def main():
